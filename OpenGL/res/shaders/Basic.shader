@@ -10,4 +10,6 @@ void main() { gl_Position = position; };
 
 out vec4 color;  // specify return value
 
-void main() { color = vec4(0.2, 0.3, 0.0, 1.0); };
+uniform vec4 u_Color;
+
+void main() { color = u_Color; };

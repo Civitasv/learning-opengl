@@ -7,7 +7,7 @@
 #include "GLFW/glfw3.h"
 
 #define ASSERT(x) \
-  if ((!x)) __debugbreak();
+  if (!(x)) __debugbreak();
 
 #ifdef NDEBUG
 #define GLCall(x) x
@@ -63,7 +63,7 @@ static ShaderProgramSource ParseShader(const std::string& filepath) {
 
 static unsigned int CompileShader(unsigned int type,
                                   const std::string& source) {
-  unsigned int id = glCreateShader(type);
+  GLCall(unsigned int id = glCreateShader(type));
   const char* src = source.c_str();
   // Set the source code in shader(id) to the source code in the array of
   // strings specified by string(source).
@@ -90,7 +90,7 @@ static unsigned int CompileShader(unsigned int type,
 
 static unsigned int CreateShader(const std::string& vertexShader,
                                  const std::string& fragmentShader) {
-  unsigned int program = glCreateProgram();
+  GLCall(unsigned int program = glCreateProgram());
   unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
   unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
 
@@ -165,24 +165,37 @@ int main(void) {
 
   ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
 
-  unsigned int shader =
+  unsigned int program =
       CreateShader(source.VertexSource, source.FragmentSource);
-  GLCall(glUseProgram(shader));
+  GLCall(glUseProgram(program));
 
+  GLCall(int location = glGetUniformLocation(program, "u_Color"));
+  ASSERT(location != -1);
+
+  float r = 0.0f;
+  float increment = 0.05f;
   /* Loop until the user closes the window */
   while (!glfwWindowShouldClose(window)) {
     /* Render here */
     GLCall(glClear(GL_COLOR_BUFFER_BIT));
 
+    GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
     GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+    
+    if (r > 1.0f)
+      increment = -0.05;
+    else if (r < 0.0f)
+      increment = 0.05f;
+    r += increment;
 
     /* Swap front and back buffers */
     glfwSwapBuffers(window);
+    glfwSwapInterval(1);
 
     /* Poll for and process events */
     GLCall(glfwPollEvents());
   }
-  GLCall(glDeleteShader(shader));
+  GLCall(glDeleteProgram(program));
   GLCall(glEnableVertexAttribArray(0));
 
   glfwTerminate();
