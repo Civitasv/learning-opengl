@@ -60,6 +60,7 @@ static unsigned int CompileShader(unsigned int type,
   }
   return id;
 }
+
 static unsigned int CreateShader(const std::string& vertexShader,
                                  const std::string& fragmentShader) {
   unsigned int program = glCreateProgram();
@@ -104,13 +105,24 @@ int main(void) {
   }
   std::cout << "Status: Using GLEW " << glewGetString(GLEW_VERSION) << '\n';
 
-  float positions[6] = {-0.5f, -0.5f, 0.0f, 0.5f, 0.5f, -0.5f};
+  float positions[] = {
+    -0.5f, -0.5f, 
+    0.5f,  -0.5f, 
+    0.5f,  0.5f,
+    -0.5f, 0.5f,  
+  };
+
+  unsigned int indices[] = {
+    0, 1, 2,
+    2, 3, 0
+  };
 
   // STATE MACHINE
   unsigned int buffer;
   glGenBuffers(1, &buffer);
   glBindBuffer(GL_ARRAY_BUFFER, buffer);
-  glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), positions, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, 6 * 2 * sizeof(float), positions,
+               GL_STATIC_DRAW);
 
   glEnableVertexAttribArray(0);
   // index: index of this attribute
@@ -123,6 +135,13 @@ int main(void) {
   // 表示该属性第一个值在数据（positions）中的位置
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
 
+  // index buffer object
+  unsigned int ibo;
+  glGenBuffers(1, &ibo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices,
+               GL_STATIC_DRAW);
+
   ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
 
   unsigned int shader =
@@ -134,7 +153,7 @@ int main(void) {
     /* Render here */
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
     /* Swap front and back buffers */
     glfwSwapBuffers(window);
