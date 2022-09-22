@@ -5,7 +5,8 @@
 #include <sstream>
 #include <string>
 
-#include "Renderer.h"
+#include "GL/glew.h"
+#include "Log.h"
 
 Shader::Shader(const std::string& filepath)
     : m_Filepath(filepath), m_RendererID(0) {

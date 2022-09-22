@@ -1,17 +1,18 @@
 #include "Renderer.h"
+
 #include <iostream>
 
-void GLClearError() {
-  while (glGetError())
-    ;
-}
+#include "GL/glew.h"
+#include "Log.h"
 
-bool GLLogCall(const char* function, const char* file, int line) {
-  while (GLenum error = glGetError()) {
-    std::cout << "[OpenGL Error] (" << error << "): " << function << " " << file
-              << ": " << line << std::endl;
-    return false;
-  }
+void Renderer::Clear() const { GLCall(glClear(GL_COLOR_BUFFER_BIT)); }
 
-  return true;
+void Renderer::Draw(const VertexArray& va, const Shader& shader,
+                    int count) const {
+  shader.Bind();
+
+  // I can just bind VAO, it will bind VBO and vertex layout and IBO for us.
+  va.Bind();
+
+  GLCall(glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, nullptr));
 }

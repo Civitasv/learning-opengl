@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "GL/glew.h"
-#include "Renderer.h"
+#include "Log.h"
 
 struct VertexBufferElement {
   unsigned int type;
@@ -35,8 +35,7 @@ class VertexBufferLayout {
   VertexBufferLayout() : m_Stride(0) {}
 
   template <typename T>
-  void Push(unsigned int count) {
-  }
+  void Push(unsigned int count) {}
 
   template <>
   void Push<float>(unsigned int count) {

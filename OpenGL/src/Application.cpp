@@ -6,10 +6,11 @@
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
 #include "IndexBuffer.h"
+#include "Log.h"
 #include "Renderer.h"
+#include "Shader.h"
 #include "VertexArray.h"
 #include "VertexBuffer.h"
-#include "Shader.h"
 
 int main(void) {
   GLFWwindow* window;
@@ -41,13 +42,15 @@ int main(void) {
 
     unsigned int indices[] = {0, 1, 2, 2, 3, 0};
 
+    Renderer renderer;
+
     // vertex array object
     VertexArray va;
     // vertex buffer object
     VertexBuffer vb(positions, 4 * 2 * sizeof(float));
     // specify layout in vertex buffer
     VertexBufferLayout layout;
-    layout.Push<float>(2); 
+    layout.Push<float>(2);
 
     // index buffer object, specify how I want to draw this layout.
     IndexBuffer ib(indices, 6);
@@ -68,15 +71,12 @@ int main(void) {
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window)) {
       /* Render here */
-      GLCall(glClear(GL_COLOR_BUFFER_BIT));
+      renderer.Clear();
 
       shader.Bind();
       shader.SetUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);
 
-      // I can just bind VAO, it will bind VBO and vertex layout and IBO for us.
-      va.Bind();
-
-      GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+      renderer.Draw(va, shader, ib.GetCount());
 
       if (r > 1.0f)
         increment = -0.05f;
