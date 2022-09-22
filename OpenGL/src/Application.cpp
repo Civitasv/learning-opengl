@@ -7,6 +7,7 @@
 #include "GLFW/glfw3.h"
 #include "IndexBuffer.h"
 #include "Renderer.h"
+#include "VertexArray.h"
 #include "VertexBuffer.h"
 
 struct ShaderProgramSource {
@@ -115,28 +116,17 @@ int main(void) {
     unsigned int indices[] = {0, 1, 2, 2, 3, 0};
 
     // vertex array object
-    unsigned int vao;
-    GLCall(glGenVertexArrays(1, &vao));
-    GLCall(glBindVertexArray(vao));
-
+    VertexArray va;
     // vertex buffer object
     VertexBuffer vb(positions, 4 * 2 * sizeof(float));
+    // specify layout in vertex buffer
+    VertexBufferLayout layout;
+    layout.Push<float>(2); 
 
-    GLCall(glEnableVertexAttribArray(0));
-    // index: index of this attribute
-    // size: the number of components of this attribute
-    // stride: byte offset between two attributes
-    // pointer: first location of this attribute
-    // 0 表示该属性的 index，2 表示该属性有两个数据组成，GL_FLOAT 表示每个数据是
-    // float GL_FALSE 表示不要normalize，2*sizeof(float)
-    // 表示该属性第一个值和第二个值之间的间隔， 0
-    // 表示该属性第一个值在数据（positions）中的位置
-    // 这个函数也使得 VBO 与 VAO 绑定
-    GLCall(
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0));
-
-    // index buffer object
+    // index buffer object, specify how I want to draw this layout.
     IndexBuffer ib(indices, 6);
+
+    va.AddBuffer(vb, ib, layout);
 
     ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
 
@@ -149,9 +139,9 @@ int main(void) {
 
     // unbind everything
     GLCall(glUseProgram(0));
-    GLCall(glBindVertexArray(0));
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+    va.Unbind();
+    vb.Unbind();
+    ib.Unbind();
 
     float r = 0.0f;
     float increment = 0.05f;
@@ -164,12 +154,12 @@ int main(void) {
       GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
 
       // I can just bind VAO, it will bind VBO and vertex layout and IBO for us.
-      GLCall(glBindVertexArray(vao));
+      va.Bind();
 
       GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
       if (r > 1.0f)
-        increment = -0.05;
+        increment = -0.05f;
       else if (r < 0.0f)
         increment = 0.05f;
       r += increment;
