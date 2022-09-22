@@ -5,33 +5,9 @@
 
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
-
-#define ASSERT(x) \
-  if (!(x)) __debugbreak();
-
-#ifdef NDEBUG
-#define GLCall(x) x
-#else
-#define GLCall(x) \
-  GLClearError(); \
-  x;              \
-  ASSERT(GLLogCall(#x, __FILE__, __LINE__))
-#endif
-
-static void GLClearError() {
-  while (glGetError())
-    ;
-}
-
-static bool GLLogCall(const char* function, const char* file, int line) {
-  while (GLenum error = glGetError()) {
-    std::cout << "[OpenGL Error] (" << error << "): " << function << " " << file
-              << ": " << line << std::endl;
-    return false;
-  }
-
-  return true;
-}
+#include "IndexBuffer.h"
+#include "Renderer.h"
+#include "VertexBuffer.h"
 
 struct ShaderProgramSource {
   std::string VertexSource;
@@ -131,73 +107,83 @@ int main(void) {
     std::cerr << "Error: " << glewGetErrorString(err) << '\n';
   }
   std::cout << "Status: Using GLEW " << glewGetString(GLEW_VERSION) << '\n';
+  {
+    float positions[] = {
+        -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
+    };
 
-  float positions[] = {
-      -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
-  };
+    unsigned int indices[] = {0, 1, 2, 2, 3, 0};
 
-  unsigned int indices[] = {0, 1, 2, 2, 3, 0};
+    // vertex array object
+    unsigned int vao;
+    GLCall(glGenVertexArrays(1, &vao));
+    GLCall(glBindVertexArray(vao));
 
-  // STATE MACHINE
-  unsigned int buffer;
-  GLCall(glGenBuffers(1, &buffer));
-  GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-  GLCall(glBufferData(GL_ARRAY_BUFFER, 6 * 2 * sizeof(float), positions,
-                      GL_STATIC_DRAW));
+    // vertex buffer object
+    VertexBuffer vb(positions, 4 * 2 * sizeof(float));
 
-  GLCall(glEnableVertexAttribArray(0));
-  // index: index of this attribute
-  // size: the number of components of this attribute
-  // stride: byte offset between two attributes
-  // pointer: first location of this attribute
-  // 0 表示该属性的 index，2 表示该属性有两个数据组成，GL_FLOAT 表示每个数据是
-  // float GL_FALSE 表示不要normalize，2*sizeof(float)
-  // 表示该属性第一个值和第二个值之间的间隔， 0
-  // 表示该属性第一个值在数据（positions）中的位置
-  GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0));
+    GLCall(glEnableVertexAttribArray(0));
+    // index: index of this attribute
+    // size: the number of components of this attribute
+    // stride: byte offset between two attributes
+    // pointer: first location of this attribute
+    // 0 表示该属性的 index，2 表示该属性有两个数据组成，GL_FLOAT 表示每个数据是
+    // float GL_FALSE 表示不要normalize，2*sizeof(float)
+    // 表示该属性第一个值和第二个值之间的间隔， 0
+    // 表示该属性第一个值在数据（positions）中的位置
+    // 这个函数也使得 VBO 与 VAO 绑定
+    GLCall(
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0));
 
-  // index buffer object
-  unsigned int ibo;
-  GLCall(glGenBuffers(1, &ibo));
-  GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
-  GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int),
-                      indices, GL_STATIC_DRAW));
+    // index buffer object
+    IndexBuffer ib(indices, 6);
 
-  ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
+    ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
 
-  unsigned int program =
-      CreateShader(source.VertexSource, source.FragmentSource);
-  GLCall(glUseProgram(program));
+    unsigned int program =
+        CreateShader(source.VertexSource, source.FragmentSource);
+    GLCall(glUseProgram(program));
 
-  GLCall(int location = glGetUniformLocation(program, "u_Color"));
-  ASSERT(location != -1);
+    GLCall(int location = glGetUniformLocation(program, "u_Color"));
+    ASSERT(location != -1);
 
-  float r = 0.0f;
-  float increment = 0.05f;
-  /* Loop until the user closes the window */
-  while (!glfwWindowShouldClose(window)) {
-    /* Render here */
-    GLCall(glClear(GL_COLOR_BUFFER_BIT));
+    // unbind everything
+    GLCall(glUseProgram(0));
+    GLCall(glBindVertexArray(0));
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
 
-    GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
-    GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
-    
-    if (r > 1.0f)
-      increment = -0.05;
-    else if (r < 0.0f)
-      increment = 0.05f;
-    r += increment;
+    float r = 0.0f;
+    float increment = 0.05f;
+    /* Loop until the user closes the window */
+    while (!glfwWindowShouldClose(window)) {
+      /* Render here */
+      GLCall(glClear(GL_COLOR_BUFFER_BIT));
 
-    /* Swap front and back buffers */
-    glfwSwapBuffers(window);
-    glfwSwapInterval(1);
+      GLCall(glUseProgram(program));
+      GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
 
-    /* Poll for and process events */
-    GLCall(glfwPollEvents());
+      // I can just bind VAO, it will bind VBO and vertex layout and IBO for us.
+      GLCall(glBindVertexArray(vao));
+
+      GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+
+      if (r > 1.0f)
+        increment = -0.05;
+      else if (r < 0.0f)
+        increment = 0.05f;
+      r += increment;
+
+      /* Swap front and back buffers */
+      glfwSwapBuffers(window);
+      glfwSwapInterval(1);
+
+      /* Poll for and process events */
+      GLCall(glfwPollEvents());
+    }
+    GLCall(glDeleteProgram(program));
+    GLCall(glEnableVertexAttribArray(0));
   }
-  GLCall(glDeleteProgram(program));
-  GLCall(glEnableVertexAttribArray(0));
-
   glfwTerminate();
   return 0;
 }
