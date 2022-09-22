@@ -26,9 +26,9 @@ void VertexArray::AddBuffer(const VertexBuffer& vb, const IndexBuffer& ib,
     // 表示该属性第一个值和第二个值之间的间隔， 0
     // 表示该属性第一个值在数据（positions）中的位置
     // 这个函数也使得 VBO 与 VAO 绑定
-    glVertexAttribPointer(i, elements[i].count, elements[i].type,
-                          elements[i].normalized, layout.GetStride(),
-                          (const void*)offset);
+    GLCall(glVertexAttribPointer(i, elements[i].count, elements[i].type,
+                                 elements[i].normalized, layout.GetStride(),
+                                 (const void*)offset));
     offset += elements[i].count +
               VertexBufferElement::GetSizeOfType(elements[i].type);
   }

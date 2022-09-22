@@ -9,81 +9,7 @@
 #include "Renderer.h"
 #include "VertexArray.h"
 #include "VertexBuffer.h"
-
-struct ShaderProgramSource {
-  std::string VertexSource;
-  std::string FragmentSource;
-};
-
-static ShaderProgramSource ParseShader(const std::string& filepath) {
-  std::ifstream stream(filepath);
-  enum class ShaderType { NONE = -1, VERTEX = 0, FRAGMENT = 1 };
-  std::string line;
-  std::stringstream ss[2];
-  ShaderType type = ShaderType::NONE;
-
-  while (getline(stream, line)) {
-    if (line.find("#shader") != std::string::npos) {
-      if (line.find("vertex") != std::string::npos) {
-        // vertex
-        type = ShaderType::VERTEX;
-      } else if (line.find("fragment") != std::string::npos) {
-        // fragment
-        type = ShaderType::FRAGMENT;
-      }
-    } else {
-      ss[(int)type] << line << '\n';
-    }
-  }
-  return {ss[0].str(), ss[1].str()};
-}
-
-static unsigned int CompileShader(unsigned int type,
-                                  const std::string& source) {
-  GLCall(unsigned int id = glCreateShader(type));
-  const char* src = source.c_str();
-  // Set the source code in shader(id) to the source code in the array of
-  // strings specified by string(source).
-  GLCall(glShaderSource(id, 1, &src, nullptr));
-  // Compile the source code strings that have been stored in the shader object
-  // specified by shader.
-  GLCall(glCompileShader(id));
-
-  // GET ERROR MESSAGE
-  int result;
-  GLCall(glGetShaderiv(id, GL_COMPILE_STATUS, &result));
-  if (result == GL_FALSE) {
-    int length;
-    GLCall(glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length));
-    char* message = (char*)alloca(length * sizeof(char));
-    GLCall(glGetShaderInfoLog(id, length, &length, message));
-    std::cout << "FAILED to compile" << source << " shader!" << message << '\n';
-
-    GLCall(glDeleteShader(id));
-    return 0;
-  }
-  return id;
-}
-
-static unsigned int CreateShader(const std::string& vertexShader,
-                                 const std::string& fragmentShader) {
-  GLCall(unsigned int program = glCreateProgram());
-  unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
-  unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
-
-  GLCall(glAttachShader(program, vs));
-  GLCall(glAttachShader(program, fs));
-
-  GLCall(glLinkProgram(program));
-  GLCall(glValidateProgram(program));
-
-  // vs and fs kinda like C++'s object file, so after linking, we can delete
-  // them.
-  GLCall(glDeleteShader(vs));
-  GLCall(glDeleteShader(fs));
-
-  return program;
-}
+#include "Shader.h"
 
 int main(void) {
   GLFWwindow* window;
@@ -128,17 +54,11 @@ int main(void) {
 
     va.AddBuffer(vb, ib, layout);
 
-    ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
-
-    unsigned int program =
-        CreateShader(source.VertexSource, source.FragmentSource);
-    GLCall(glUseProgram(program));
-
-    GLCall(int location = glGetUniformLocation(program, "u_Color"));
-    ASSERT(location != -1);
+    Shader shader("res/shaders/Basic.shader");
+    shader.Bind();
 
     // unbind everything
-    GLCall(glUseProgram(0));
+    shader.Unbind();
     va.Unbind();
     vb.Unbind();
     ib.Unbind();
@@ -150,8 +70,8 @@ int main(void) {
       /* Render here */
       GLCall(glClear(GL_COLOR_BUFFER_BIT));
 
-      GLCall(glUseProgram(program));
-      GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
+      shader.Bind();
+      shader.SetUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);
 
       // I can just bind VAO, it will bind VBO and vertex layout and IBO for us.
       va.Bind();
@@ -171,8 +91,6 @@ int main(void) {
       /* Poll for and process events */
       GLCall(glfwPollEvents());
     }
-    GLCall(glDeleteProgram(program));
-    GLCall(glEnableVertexAttribArray(0));
   }
   glfwTerminate();
   return 0;
