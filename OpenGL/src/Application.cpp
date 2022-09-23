@@ -12,6 +12,8 @@
 #include "Texture.h"
 #include "VertexArray.h"
 #include "VertexBuffer.h"
+#include "glm/glm.hpp"
+#include "glm/gtx/transform.hpp"
 
 int main(void) {
   GLFWwindow* window;
@@ -41,15 +43,19 @@ int main(void) {
   std::cout << "Status: Using GLEW " << glewGetString(GLEW_VERSION) << '\n';
   {
     float positions[] = {
-        -0.5f, -0.5f, 0.0f, 0.0f,  // 0
-        0.5f,  -0.5f, 1.0f, 0.0f,  // 1
-        0.5f,  0.5f,  1.0f, 1.0f,  // 2
-        -0.5f, 0.5f,  0.0f, 1.0f   // 3
+        -1.5f, -1.5f, 0.0f, 0.0f,  // 0
+        1.5f,  -1.5f, 1.0f, 0.0f,  // 1
+        1.5f,  1.5f,  1.0f, 1.0f,  // 2
+        -1.5f, 1.5f,  0.0f, 1.0f   // 3
     };
 
     unsigned int indices[] = {0, 1, 2, 2, 3, 0};
 
     GLCall(glEnable(GL_BLEND));
+    // R = r_src * sfactor + r_dest * dfactor
+    // G = g_src * sfactor + g_dest * dfactor
+    // B = b_src * sfactor + b_dest * dfactor
+    // A = a_src * sfactor + a_dest * dfactor
     GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
     Renderer renderer;
@@ -68,8 +74,12 @@ int main(void) {
 
     va.AddBuffer(vb, ib, layout);
 
+    // 4 * 3
+    glm::mat4 proj = glm::ortho(-2.0f, 2.0f, -1.5f, 1.5f, -1.0f, 1.0f);
+
     Shader shader("res/shaders/Basic.shader");
     shader.Bind();
+    shader.SetUniformMat4f("u_MVP", proj);
 
     // unbind everything
     shader.Unbind();
@@ -81,7 +91,7 @@ int main(void) {
     while (!glfwWindowShouldClose(window)) {
       /* Render here */
       renderer.Clear();
-      
+
       Texture texture("res/textures/icon.png");
       texture.Bind();
 
