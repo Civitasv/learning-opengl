@@ -12,7 +12,7 @@ class Shader {
   std::string m_Filepath;
   unsigned int m_RendererID;
   // caching for uniforms
-  std::unordered_map<std::string, unsigned int> m_UniformLocationCache;
+  std::unordered_map<std::string, int> m_UniformLocationCache;
  public:
   Shader(const std::string& filepath);
   ~Shader();
@@ -23,6 +23,7 @@ class Shader {
   // Set uniforms
   void SetUniform4f(const std::string& name, float v0, float v1, float v2,
                     float v3);
+  void SetUniform1i(const std::string& name, int value);
 
  private:
   int GetUniformLocation(const std::string& name);
